@@ -3,8 +3,7 @@ import cv2
 import numpy as np
 
 def load_denoised_volumes(base_dir, mask_dir, target_height=256, target_width=200,
-                 test_subjects=['MB1692', 'Ex-vivo1', '0P2'], n_test=100,
-                 exclude=None):
+                 test_subjects=['test'], exclude=None):
     """
     Load all denoised OCT scans and their corresponding masks, returning them as per-volume lists.
 
@@ -39,7 +38,7 @@ def load_denoised_volumes(base_dir, mask_dir, target_height=256, target_width=20
 
         file_path = os.path.join(base_dir, filename)
 
-        # ── Load mask ───────────────────────────────────────────────────────
+        # Load mask
         mask_stem     = filename.replace('_denoised_t50.npy', '')
         mask_filename = f"{mask_stem}_mask.png"
         mask_path     = os.path.join(mask_dir, mask_filename)
@@ -78,7 +77,7 @@ def load_denoised_volumes(base_dir, mask_dir, target_height=256, target_width=20
             vol_arr = np.expand_dims(np.array(slices, dtype=np.float32), axis=-1)
             # vol_arr: (N_bscans, H, W, 1)
 
-            # ── Resize mask to (N_bscans, target_width) ──────────────────────
+            # Resize mask to (N_bscans, target_width)
             # cv2.resize takes (W, H) — here W=target_width, H=N_bscans
             mask_resized = cv2.resize(
                 mask_img,
@@ -91,7 +90,7 @@ def load_denoised_volumes(base_dir, mask_dir, target_height=256, target_width=20
             print(f"    mask shape: {mask_arr.shape}  "
                   f"shadow coverage: {mask_arr.mean()*100:.1f}%")
 
-            # ── Bundle result ─────────────────────────────────────────────────
+            # Bundle result 
             entry = {'volume': vol_arr, 'mask': mask_arr, 'filename': filename}
 
             if is_test:
@@ -102,93 +101,34 @@ def load_denoised_volumes(base_dir, mask_dir, target_height=256, target_width=20
         except Exception as e:
             print(f"  Error loading {filename}: {e}")
 
-    n = len(test_volumes)
-    if n > 0:
-        if n_test >= n:
-            split        = max(1, n * 4 // 5)
-            val_volumes  = test_volumes[:split]
-            test_arr_out = test_volumes[split:]
-        else:
-            test_idx     = np.linspace(0, n - 1, n_test, dtype=int)
-            val_mask     = np.ones(n, dtype=bool)
-            val_mask[test_idx] = False
-            val_volumes  = [test_volumes[i] for i in range(n) if val_mask[i]]
-            test_arr_out = [test_volumes[i] for i in test_idx]
-    else:
-        val_volumes  = []
-        test_arr_out = []
+    test_volumes = sorted(
+        test_volumes,
+        key=lambda x: x['filename'].replace('_denoised_t50.npy', '').replace('.npy', '')
+    )
 
+    rng = np.random.RandomState(42)
+    rng.shuffle(test_volumes)
+
+    n = len(test_volumes)
+    split = max(1, n * 4 // 5)
+
+    val_volumes  = test_volumes[:split]
+    test_volumes_out = test_volumes[split:]
+
+    print("\n=== Validation files ===")
+    for x in val_volumes:
+        print(x['filename'])
+
+    print("\n=== Test files ===")
+    for x in test_volumes_out:
+        print(x['filename'])
+    
     print(f"\n=== Data Summary (load_denoised_volumes) ===")
     print(f"Train volumes: {len(train_volumes)}  |  "
-          f"Val volumes: {len(val_volumes)}  |  Test volumes: {len(test_arr_out)}")
+          f"Val volumes: {len(val_volumes)}  |  Test volumes: {len(test_volumes_out)}")
 
     return {
         'train': train_volumes,
         'val':   val_volumes,
-        'test':  test_arr_out,
-    }
-
-def load_all_denoised_scans(base_dir, mask_dir, target_height=256, target_width=200,
-                 test_subjects=['MB1692', 'Ex-vivo1', '0P2'], n_test=100,
-                 exclude=None):
-    """
-    Loads all denoised OCT scans and flattens them into 2D arrays of shape
-    (Total_Bscans, H, W, 1). Also returns the flattened masks of shape (Total_Bscans, W).
-    """
-    data = load_denoised_volumes(base_dir, mask_dir=mask_dir,
-                                 target_height=target_height,
-                                 target_width=target_width,
-                                 test_subjects=test_subjects,
-                                 n_test=0, exclude=exclude)
-
-    train_vols = data['train']
-
-    # 1. Flatten Training Data
-    if train_vols:
-        train_scans = np.concatenate([v['volume'] for v in train_vols], axis=0)
-        train_masks = np.concatenate([v['mask'] for v in train_vols], axis=0)
-    else:
-        train_scans = np.empty((0, target_height, target_width, 1), dtype=np.float32)
-        train_masks = np.empty((0, target_width), dtype=np.float32)
-
-    # 2. Flatten Holdout Data
-    holdout_vols = data['val']
-    if holdout_vols:
-        all_holdout_scans = np.concatenate([v['volume'] for v in holdout_vols], axis=0)
-        all_holdout_masks = np.concatenate([v['mask'] for v in holdout_vols], axis=0)
-    else:
-        all_holdout_scans = np.empty((0, target_height, target_width, 1), dtype=np.float32)
-        all_holdout_masks = np.empty((0, target_width), dtype=np.float32)
-
-    # 3. Split Holdout into Val and Test
-    n = len(all_holdout_scans)
-    if n > 0:
-        actual_n_test = min(n_test, max(1, n - 1))
-        test_idx  = np.linspace(0, n - 1, actual_n_test, dtype=int)
-        val_mask  = np.ones(n, dtype=bool)
-        val_mask[test_idx] = False
-        
-        val_scans  = all_holdout_scans[val_mask]
-        test_scans = all_holdout_scans[test_idx]
-        
-        val_masks  = all_holdout_masks[val_mask]
-        test_masks = all_holdout_masks[test_idx]
-    else:
-        val_scans  = np.empty((0, target_height, target_width, 1), dtype=np.float32)
-        test_scans = np.empty((0, target_height, target_width, 1), dtype=np.float32)
-        test_idx   = np.array([], dtype=int)
-        
-        val_masks  = np.empty((0, target_width), dtype=np.float32)
-        test_masks = np.empty((0, target_width), dtype=np.float32)
-
-    print(f"\n=== Data Summary (Flattened 2D Scans) ===")
-    print(f"Train: {train_scans.shape[0]}  |  "
-          f"Val: {val_scans.shape[0]}  |  Test: {test_scans.shape[0]}")
-
-    # 4. Return Output
-    return {
-        'train':        {'volume': train_scans, 'mask': train_masks},
-        'val':          {'volume': val_scans,   'mask': val_masks},
-        'test':         {'volume': test_scans,  'mask': test_masks},
-        'test_indices': test_idx,
+        'test':  test_volumes_out,
     }

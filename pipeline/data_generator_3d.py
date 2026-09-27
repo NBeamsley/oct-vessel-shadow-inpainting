@@ -45,8 +45,8 @@ class DataGenerator3D(tf.keras.utils.Sequence):
                                   OR list of (N,H,W,1) arrays
                                   OR list of (filename, volume) tuples
             valid_indices:        list of either:
-                                  - (vol_idx, d_start, w_start) tuples  [old]
-                                  - (vol_idx, d_start, w_start, axis)   [new]
+                                  - (vol_idx, d_start, w_start) tuples
+                                  - (vol_idx, d_start, w_start, axis)
             batch_size:           number of 3D chunks per batch
             outshape:             (D, H, W, 1)
             min_shadow_width:     minimum synthetic shadow width in columns
