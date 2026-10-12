@@ -78,7 +78,6 @@ def load_denoised_volumes(base_dir, mask_dir, target_height=256, target_width=20
             # vol_arr: (N_bscans, H, W, 1)
 
             # Resize mask to (N_bscans, target_width)
-            # cv2.resize takes (W, H) — here W=target_width, H=N_bscans
             mask_resized = cv2.resize(
                 mask_img,
                 (target_width, raw_vol.shape[0]),

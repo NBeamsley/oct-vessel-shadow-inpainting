@@ -28,7 +28,6 @@ def build_valid_patch_index(volumes, patch_width=64, depth=8,
                 for w_start in range(0, W - patch_width + 1, width_stride):
 
                     # Extract the (depth, patch_width) mask region
-                    # mask shape is (N, W) so index directly
                     mask_chunk  = mask[d_start:d_start + depth,
                                     w_start:w_start + patch_width]
                     shadow_frac = float(np.mean(mask_chunk))

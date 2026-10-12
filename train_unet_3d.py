@@ -140,62 +140,64 @@ def build_unet(shape=PATCH_SHAPE):
 
     # ==== Encoder ====
     # Level 1: (D, 256, 64) -> skip c1, stride -> (D, 128, 32)
-    c1 = layers.Conv3D(16, (3, 3, 3), activation='relu', padding='same')(inputs)
+    c1 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(inputs)
     c1 = layers.BatchNormalization()(c1)
-    c1 = layers.Conv3D(16, (3, 3, 3), activation='relu', padding='same')(c1)
+    c1 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(c1)
     c1 = layers.Dropout(0.1)(c1)
-    p1 = layers.Conv3D(16, (1, 3, 3), strides=(1, 2, 2), activation='relu', padding='same')(c1)
+    p1 = layers.Conv3D(32, (1, 3, 3), strides=(1, 2, 2), activation='relu', padding='same')(c1)
 
     # Level 2: (D, 128, 32) -> skip c2, stride -> (D, 64, 16)
-    c2 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(p1)
+    c2 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(p1)
     c2 = layers.BatchNormalization()(c2)
-    c2 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(c2)
+    c2 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(c2)
     c2 = layers.Dropout(0.1)(c2)
-    p2 = layers.Conv3D(32, (1, 3, 3), strides=(1, 2, 2), activation='relu', padding='same')(c2)
+    p2 = layers.Conv3D(64, (1, 3, 3), strides=(1, 2, 2), activation='relu', padding='same')(c2)
 
     # Level 3: (D, 64, 16) -> skip c3, stride -> (D, 32, 8)
-    c3 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(p2)
+    c3 = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(p2)
     c3 = layers.BatchNormalization()(c3)
-    c3 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(c3)
+    c3 = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(c3)
     c3 = layers.Dropout(0.1)(c3)
-    p3 = layers.Conv3D(64, (1, 3, 3), strides=(1, 2, 2), activation='relu', padding='same')(c3)
+    p3 = layers.Conv3D(128, (1, 3, 3), strides=(1, 2, 2), activation='relu', padding='same')(c3)
 
     # ==== Bottleneck: (D, 32, 8) ====
-    bn = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(p3)
+    bn = layers.Conv3D(256, (3, 3, 3), activation='relu', padding='same')(p3)
     bn = layers.BatchNormalization()(bn)
-    bn = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(bn)
+    bn = layers.Conv3D(256, (3, 3, 3), activation='relu', padding='same')(bn)
     bn = layers.Dropout(0.1)(bn)
 
     # ==== Decoder ====
     # Level 3: (D, 32, 8) -> (D, 64, 16)
     u3 = layers.UpSampling3D(size=(1, 2, 2))(bn)
-    u3 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(u3)
+    u3 = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(u3)
     u3 = layers.Concatenate()([u3, c3])
-    d3 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(u3)
-    d3 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(d3)
+    d3 = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(u3)
+    d3 = layers.Conv3D(128, (3, 3, 3), activation='relu', padding='same')(d3)
     d3 = layers.Dropout(0.1)(d3)
 
     # Level 2: (D, 64, 16) -> (D, 128, 32)
     u2 = layers.UpSampling3D(size=(1, 2, 2))(d3)
-    u2 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(u2)
+    u2 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(u2)
     u2 = layers.Concatenate()([u2, c2])
-    d2 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(u2)
-    d2 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(d2)
+    d2 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(u2)
+    d2 = layers.Conv3D(64, (3, 3, 3), activation='relu', padding='same')(d2)
     d2 = layers.Dropout(0.1)(d2)
 
     # Level 1: (D, 128, 32) -> (D, 256, 64)
     u1 = layers.UpSampling3D(size=(1, 2, 2))(d2)
-    u1 = layers.Conv3D(16, (3, 3, 3), activation='relu', padding='same')(u1)
+    u1 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(u1)
     u1 = layers.Concatenate()([u1, c1])
-    d1 = layers.Conv3D(16, (3, 3, 3), activation='relu', padding='same')(u1)
-    d1 = layers.Conv3D(16, (3, 3, 3), activation='relu', padding='same')(d1)
+    d1 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(u1)
+    d1 = layers.Conv3D(32, (3, 3, 3), activation='relu', padding='same')(d1)
 
     outputs = layers.Conv3D(1, (1, 1, 1), activation='sigmoid')(d1)
     return tf.keras.Model(inputs, outputs, name='unet_3d_inpainter')
 
 def make_discriminator_model():
     """
-    3D discriminator: judges the quality of the entire reconstructed volume chunk.
+    Conditional 3D discriminator that evaluates the cropped synthetic-shadow
+    region of a volume chunk. The discriminator receives the image crop and
+    its corresponding binary mask as two input channels.
     """
     model = tf.keras.Sequential()
 
@@ -288,12 +290,11 @@ def get_features_3d(image_3d):
     pre = tf.keras.applications.resnet.preprocess_input(rgb)
     return feature_extractor(pre, training=False)
 
-# GRAM MATRIX: computes the C×C Gram matrix from a feature map
+# GRAM MATRIX: computes the CxC Gram matrix from a feature map
 
 def gram_matrix_features(feat):
     """
-    C×C Gram matrix from a ResNet feature map, following DeshadowGAN eq. 3:
-      G_i(x) = P_i(x)_{C,H*W}  ×  P_i(x)_{H*W,C}
+    CxC Gram matrix from a ResNet feature map.
     feat: (B, H, W, C)
     Returns: (B, C, C) normalised by C only
     """
@@ -312,7 +313,7 @@ def discriminator_loss(real_output, fake_output):
             cross_entropy(tf.zeros_like(fake_output), fake_output))
 
 # AUTOENCODER LOSS: combined loss for the generator, including pixel-wise MSE, adversarial loss,
-# style loss, content loss, and total variation loss.
+# style loss, and content loss.
 
 def autoencoder_loss(real_3d, recon_3d, fake_output, mask_3d,
                      unmasked_weight=UNMASKED_WEIGHT, rec_weight=REC_WEIGHT, 
@@ -401,11 +402,6 @@ def train_step(masked, target, mask_3d):
     masked:   (B, D, H, W, 1) — full 3D chunk with shadow zeroed across all D scans.
     target:   (B, D, H, W, 1) — clean full chunk.
     mask_3d:  (B, D, H, W, 1) — full angled shadow mask for all D B-scans.
-
-    Pixel loss is computed over all D B-scans.
-    The discriminator and perceptual losses act on a single randomly sampled
-    B-scan per step — over training, every depth position receives adversarial
-    and perceptual supervision without the cost of running ResNet 16× per step.
     """
     masked   = tf.cast(masked,   tf.float32)
     target   = tf.cast(target,   tf.float32)
@@ -447,7 +443,6 @@ def _save_grid(masked, target, epoch, tag, n=5, save_dir='Generated_Images'):
     d_idxs = [0, D // 2, D - 1]
     labels = [f"B-scan 0", f"B-scan {D//2} (mid)", f"B-scan {D-1}"]
  
-    # Rows: 3 depth positions × 3 views (masked / target / recon)
     n_rows = len(d_idxs) * 3
     fig, axes = plt.subplots(n_rows, n, figsize=(3 * n, 3 * n_rows))
     for row_group, (d, lbl) in enumerate(zip(d_idxs, labels)):

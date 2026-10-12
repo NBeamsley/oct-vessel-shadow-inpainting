@@ -7,22 +7,17 @@ class DataGenerator3D(tf.keras.utils.Sequence):
     """
     3D patch data generator with angled vessel-shadow masking.
 
-    Takes a list of volumes and a pre-built index of valid (shadow-free) patch
+    Takes a list of volumes and a pre-built index of valid patch
     positions. Patches are sliced from the volumes on demand.
 
     Augmentation is controlled by n_augmented_copies:
-        0 — no augmentation, original data only (use for val generator)
+        0 — no augmentation, original data only
         N — N augmented copy per raw patch = N+1x effective dataset
-
-    The generator virtually expands the index: the first len(valid_indices)
-    batches serve raw patches, the next len(valid_indices) serve augmented
-    copies, etc. Augmentation is applied before masking so the synthetic
-    shadow is applied to the augmented version consistently.
 
     Each __getitem__ call:
       1. Determines whether this batch draw is a raw or augmented pass.
       2. Slices the corresponding (D, H, W, 1) patch from the volume.
-      3. Optionally augments (contrast, flip, speckle).
+      3. Optionally augments.
       4. Generates a synthetic angled vessel-shadow mask.
       5. Returns (masked_batch, target_batch, mask_3d_batch) all (B, D, H, W, 1).
     """
